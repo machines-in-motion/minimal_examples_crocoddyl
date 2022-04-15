@@ -8,6 +8,6 @@ For OCP scripts
 - [Crocoddyl](https://github.com/loco-3d/crocoddyl) 
 - [Pinocchio](https://github.com/stack-of-tasks/pinocchio)
 
-For MPC simulations
+For MPC simulations (coming soon)
 - [PyBullet](https://pybullet.org/wordpress/)
 - [bullet_utils](https://github.com/machines-in-motion/bullet_utils) 
