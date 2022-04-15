@@ -109,14 +109,8 @@ sim_params['T_sim']     = 0.5
 log_rate = 100
 # Initialize simulation data 
 sim_data = mpc_utils.init_sim_data(sim_params, ocp_params, x0)
-# print(sim_data['N_sim'])
 # Simulate
 mpc_cycle = 0
-
-# print(sim_data['ocp_to_mpc_ratio'])
-# import time 
-# time.Sleep(20)
-
 for i in range(sim_data['N_sim']): 
 
     if(i%log_rate==0): 
@@ -135,30 +129,24 @@ for i in range(sim_data['N_sim']):
         ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], isFeasible=False)
         sim_data['state_pred'][mpc_cycle, :, :]  = np.array(ddp.xs)
         sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(ddp.us)
-        # sim_data ['force_pred'][mpc_cycle, :, :] = np.array([ddp.problem.runningDatas[i].differential.multibody.contacts.contacts['contact'].f.vector for i in range(config['N_h'])])
         # Extract relevant predictions for interpolations
         x_curr = sim_data['state_pred'][mpc_cycle, 0, :]    # x0* = measured state    (q^,  v^ )
         x_pred = sim_data['state_pred'][mpc_cycle, 1, :]    # x1* = predicted state   (q1*, v1*) 
         u_curr = sim_data['ctrl_pred'][mpc_cycle, 0, :]     # u0* = optimal control   (tau0*)
-        # f_curr = sim_data['force_pred'][mpc_cycle, 0, :]
-        # f_pred = sim_data['force_pred'][mpc_cycle, 1, :]
         # Record costs references
         q = sim_data['state_pred'][mpc_cycle, 0, :sim_data['nq']]
         sim_data['ctrl_ref'][mpc_cycle, :]       = pin_utils.get_u_grav(q, ddp.problem.runningModels[0].differential.pinocchio, ocp_params['armature'])
-        # sim_data['f_ee_ref'][mpc_cycle, :]     = m.differential.costs.costs['force'].cost.residual.reference.vector
         sim_data['state_ref'][mpc_cycle, :]      = ddp.problem.runningModels[0].differential.costs.costs['stateReg'].cost.residual.reference
         sim_data['lin_pos_ee_ref'][mpc_cycle, :] = ddp.problem.runningModels[0].differential.costs.costs['translation'].cost.residual.reference
 
 
         # Select reference control and state for the current MPC cycle
         x_ref_MPC_RATE  = x_curr + sim_data['ocp_to_mpc_ratio'] * (x_pred - x_curr)
-        u_ref_MPC_RATE  = u_curr #u_pred_prev + sim_data['ocp_to_mpc_ratio'] * (u_curr - u_pred_prev)
-        # f_ref_MPC_RATE  = f_curr + sim_data['ocp_to_mpc_ratio'] * (f_pred - f_curr)
+        u_ref_MPC_RATE  = u_curr 
         if(mpc_cycle==0):
             sim_data['state_des_MPC_RATE'][mpc_cycle, :]   = x_curr  
         sim_data['ctrl_des_MPC_RATE'][mpc_cycle, :]    = u_ref_MPC_RATE   
         sim_data['state_des_MPC_RATE'][mpc_cycle+1, :] = x_ref_MPC_RATE    
-            # sim_data['force_des_MPC_RATE'][mpc_cycle, :] = f_ref_MPC_RATE    
         
         # Increment planning counter
         mpc_cycle += 1
@@ -167,15 +155,12 @@ for i in range(sim_data['N_sim']):
         # Select reference control and state for the current SIMU cycle
         x_ref_SIM_RATE  = x_curr + sim_data['ocp_to_mpc_ratio'] * (x_pred - x_curr)
         u_ref_SIM_RATE  = u_curr 
-        # f_ref_SIM_RATE  = f_curr + sim_data['ocp_to_mpc_ratio'] * (f_pred - f_curr)
 
         # First prediction = measurement = initialization of MPC
         if(i==0):
             sim_data['state_des_SIM_RATE'][i, :]   = x_curr  
         sim_data['ctrl_des_SIM_RATE'][i, :]    = u_ref_SIM_RATE  
         sim_data['state_des_SIM_RATE'][i+1, :] = x_ref_SIM_RATE 
-        # print(x_ref_SIM_RATE)
-            # sim_data['force_des_SIM_RATE'][i, :] = f_ref_SIM_RATE 
 
         #  Send output of actuation torque to the RBD simulator 
         robot_simulator.send_joint_command(u_ref_SIM_RATE)
@@ -184,13 +169,10 @@ for i in range(sim_data['N_sim']):
         q_mea_SIM_RATE, v_mea_SIM_RATE = robot_simulator.get_state()
         # Update pinocchio model
         robot_simulator.forward_robot(q_mea_SIM_RATE, v_mea_SIM_RATE)
-        # f_mea_SIM_RATE = utils.get_contact_wrench(robot_simulator, id_endeff)
-        # if(i%50==0): 
-        # print(f_mea_SIM_RATE)
         # Record data (unnoised)
         x_mea_SIM_RATE = np.concatenate([q_mea_SIM_RATE, v_mea_SIM_RATE]).T 
         sim_data['state_mea_SIM_RATE'][i+1, :] = x_mea_SIM_RATE
-        # sim_data['force_mea_SIM_RATE'][i, :] = f_mea_SIM_RATE
+
 
 plot_data = mpc_utils.extract_plot_data_from_sim_data(sim_data)
 
