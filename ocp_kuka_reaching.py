@@ -7,7 +7,7 @@ import crocoddyl
 import numpy as np
 import pinocchio as pin
 np.set_printoptions(precision=4, linewidth=180)
-import utils
+import ocp_utils
 
 # # # # # # # # # # # # #
 ### LOAD ROBOT MODEL  ###
@@ -97,9 +97,9 @@ ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
 
 # Extract DDP data and plot
 ddp_data = {}
-ddp_data = utils.extract_ddp_data(ddp, ee_frame_name='contact')
+ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')
 
-utils.plot_ddp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
+ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
 
 # Display solution in Gepetto Viewer
 display = crocoddyl.GepettoDisplay(robot)
