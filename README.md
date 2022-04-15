@@ -7,6 +7,7 @@ For OCP scripts
 - [robot_properties_kuka](https://github.com/machines-in-motion/robot_properties_kuka)
 - [Crocoddyl](https://github.com/loco-3d/crocoddyl) 
 - [Pinocchio](https://github.com/stack-of-tasks/pinocchio)
+- [matplotlib](https://matplotlib.org/)
 
 For MPC simulations 
 - [PyBullet](https://pybullet.org/wordpress/)
