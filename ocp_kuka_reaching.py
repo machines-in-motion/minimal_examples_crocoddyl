@@ -96,7 +96,6 @@ us_init = ddp.problem.quasiStatic(xs_init[:-1])
 ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
 
 # Extract DDP data and plot
-ddp_data = {}
 ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')
 
 ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)

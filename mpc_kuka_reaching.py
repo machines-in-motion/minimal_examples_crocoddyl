@@ -163,14 +163,14 @@ for i in range(sim_data['N_sim']):
         sim_data['ctrl_des_SIM_RATE'][i, :]    = u_ref_SIM_RATE  
         sim_data['state_des_SIM_RATE'][i+1, :] = x_ref_SIM_RATE 
 
-        #  Send output of actuation torque to the RBD simulator 
+        # Send torque to simulator & step simulator
         robot_simulator.send_joint_command(u_ref_SIM_RATE)
         env.step()
-        # Measure new state from simulation 
+        # Measure new state from simulator 
         q_mea_SIM_RATE, v_mea_SIM_RATE = robot_simulator.get_state()
         # Update pinocchio model
         robot_simulator.forward_robot(q_mea_SIM_RATE, v_mea_SIM_RATE)
-        # Record data (unnoised)
+        # Record data 
         x_mea_SIM_RATE = np.concatenate([q_mea_SIM_RATE, v_mea_SIM_RATE]).T 
         sim_data['state_mea_SIM_RATE'][i+1, :] = x_mea_SIM_RATE
 
