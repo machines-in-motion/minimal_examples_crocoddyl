@@ -285,8 +285,7 @@ def plot_mpc_state(plot_data, PLOT_PREDICTIONS=False,
 
         # Joint position
         ax_x[i,0].plot(t_span_plan, plot_data['q_des_MPC_RATE'][:,i], color='b', linestyle='-', marker='.', label='Predicted', alpha=0.1)
-        print(plot_data['q_des_SIM_RATE'])
-        ax_x[i,0].plot(t_span_simu, plot_data['q_des_SIM_RATE'][:,i], color='y', linestyle='-', marker='.', label='Predicted (SIMU rate)', alpha=0.5)
+        # ax_x[i,0].plot(t_span_simu, plot_data['q_des_SIM_RATE'][:,i], color='y', linestyle='-', marker='.', label='Predicted (SIMU rate)', alpha=0.5)
         ax_x[i,0].plot(t_span_simu, plot_data['q_mea'][:,i], 'r-', label='Measured', linewidth=1, alpha=0.3)
         # Plot joint position regularization reference
         if('stateReg' in plot_data['active_costs']):
@@ -298,7 +297,7 @@ def plot_mpc_state(plot_data, PLOT_PREDICTIONS=False,
 
         # Joint velocity 
         ax_x[i,1].plot(t_span_plan, plot_data['v_des_MPC_RATE'][:,i], color='b', linestyle='-', marker='.', label='Predicted', alpha=0.5)
-        ax_x[i,1].plot(t_span_simu, plot_data['v_des_SIM_RATE'][:,i], color='y', linestyle='-', marker='.', label='Predicted (SIMU)', alpha=0.5)
+        # ax_x[i,1].plot(t_span_simu, plot_data['v_des_SIM_RATE'][:,i], color='y', linestyle='-', marker='.', label='Predicted (SIMU)', alpha=0.5)
         ax_x[i,1].plot(t_span_simu, plot_data['v_mea'][:,i], 'r-', label='Measured', linewidth=1, alpha=0.3)
         if('stateReg' in plot_data['active_costs']):
             ax_x[i,1].plot(t_span_plan[:-1], plot_data['state_ref'][:, i+nq], linestyle='-.', color='k', marker=None, label='xReg_ref', alpha=0.5)
@@ -399,7 +398,7 @@ def plot_mpc_control(plot_data, PLOT_PREDICTIONS=False,
         ax_u[i].plot(t_span_plan, plot_data['u_pred'][:,0,i], color='r', marker=None, linestyle='-', label='Optimal control u0*', alpha=0.6)
         ax_u[i].plot(t_span_plan, plot_data['u_des_MPC_RATE'][:,i], color='b', linestyle='-', marker='.', label='Predicted', alpha=0.1)
         # ax_u[i].plot(t_span_simu, plot_data['u_des_SIM_RATE'][:,i], color='y', linestyle='-', marker='.', label='Prediction (SIMU)', alpha=0.6)
-        ax_u[i].plot(t_span_simu, plot_data['grav'][:-1,i], color=[0.,1.,0.,0.], marker=None, linestyle='-.', label='Gravity torque', alpha=0.9)
+        # ax_u[i].plot(t_span_simu, plot_data['grav'][:-1,i], color=[0.,1.,0.,0.], marker=None, linestyle='-.', label='Gravity torque', alpha=0.9)
         # Plot reference
         if('ctrlReg' or 'ctrlRegGrav' in plot_data['active_costs']):
             ax_u[i].plot(t_span_plan, plot_data['ctrl_ref'][:, i], linestyle='-.', color='k', marker=None, label='uReg_ref', alpha=0.5)
@@ -505,7 +504,7 @@ def plot_mpc_endeff_linear(plot_data, PLOT_PREDICTIONS=False,
         ax[i,0].plot(t_span_simu, plot_data['lin_pos_ee_mea'][:,i], 'r-', label='Measured (WITH noise)', linewidth=1, alpha=0.3)
         # Plot reference
         if('translation' in plot_data['active_costs']):
-            ax[i,0].plot(t_span_plan[:-1], plot_data['lin_pos_ee_ref'][:,i], color=[0.,1.,0.,0.], linestyle='-.', linewidth=2., label='Reference', alpha=0.9)
+            ax[i,0].plot(t_span_plan[:-1], plot_data['lin_pos_ee_ref'][:,i], color='k', linestyle='-.', linewidth=2., label='Reference', alpha=0.9)
         ax[i,0].set_ylabel('$P^{EE}_%s$  (m)'%xyz[i], fontsize=16)
         ax[i,0].yaxis.set_major_locator(plt.MaxNLocator(2))
         ax[i,0].yaxis.set_major_formatter(plt.FormatStrFormatter('%.3e'))
@@ -517,7 +516,7 @@ def plot_mpc_endeff_linear(plot_data, PLOT_PREDICTIONS=False,
         ax[i,1].plot(t_span_simu, plot_data['lin_vel_ee_mea'][:,i], 'r-', label='Measured (WITH noise)', linewidth=1, alpha=0.3)
         # Plot reference 
         if('velocity' in plot_data['active_costs']):
-            ax[i,1].plot(t_span_plan, [0.]*(N_mpc+1), color=[0.,1.,0.,0.], linestyle='-.', linewidth=2., label='Reference', alpha=0.9)
+            ax[i,1].plot(t_span_plan, [0.]*(N_mpc+1), color='k', linestyle='-.', linewidth=2., label='Reference', alpha=0.9)
         ax[i,1].set_ylabel('$V^{EE}_%s$  (m)'%xyz[i], fontsize=16)
         ax[i,1].yaxis.set_major_locator(plt.MaxNLocator(2))
         ax[i,1].yaxis.set_major_formatter(plt.FormatStrFormatter('%.3e'))
