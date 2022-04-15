@@ -101,7 +101,7 @@ ddp_data = utils.extract_ddp_data(ddp, ee_frame_name='contact')
 
 utils.plot_ddp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
 
-# # Display solution in Gepetto Viewer
-# display = crocoddyl.GepettoDisplay(robot)
-# display.displayFromSolver(ddp, factor=1)
+# Display solution in Gepetto Viewer
+display = crocoddyl.GepettoDisplay(robot)
+display.displayFromSolver(ddp, factor=1)
 

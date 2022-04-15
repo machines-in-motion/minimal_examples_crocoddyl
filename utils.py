@@ -712,7 +712,6 @@ def plot_ddp_endeff_linear(ddp_data, fig=None, ax=None, label=None, marker=None,
         lin_pos_ee_ref = np.array(ddp_data['translation_ref'])
     else:
         lin_pos_ee_ref = np.array([lin_pos_ee[0,:] for i in range(N+1)])
-    print(lin_pos_ee_ref)
     # Cost reference frame linear velocity if any, or initial one
     if('velocity' in ddp_data['active_costs']):
         lin_vel_ee_ref = np.array(ddp_data['velocity_ref'])[:,:3] # linear part

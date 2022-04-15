@@ -59,7 +59,7 @@ contactModel.addContact("contact", contact3d, active=True)
 
 # Create cost terms 
   # Control regularization cost
-uResidual = crocoddyl.ResidualModelControl(state, np.zeros(nq))
+uResidual = crocoddyl.ResidualModelContactControlGrav(state)
 uRegCost = crocoddyl.CostModelResidual(state, uResidual)
   # State regularization cost
 xResidual = crocoddyl.ResidualModelState(state, x0)
@@ -70,10 +70,10 @@ frameForceResidual = crocoddyl.ResidualModelContactForce(state, contact_frame_id
 contactForceCost = crocoddyl.CostModelResidual(state, frameForceResidual)
 
 # Populate cost models with cost terms
-runningCostModel.addCost("xReg", xRegCost, 1e-2)
-runningCostModel.addCost("uReg", uRegCost, 1e-3)
-runningCostModel.addCost("contactForce", contactForceCost, 1.)
-terminalCostModel.addCost("xReg", xRegCost, 1e-2)
+runningCostModel.addCost("stateReg", xRegCost, 1e-2)
+runningCostModel.addCost("ctrlRegGrav", uRegCost, 1e-4)
+runningCostModel.addCost("force", contactForceCost, 10.)
+terminalCostModel.addCost("stateReg", xRegCost, 1e-2)
 
 # Create Differential Action Model (DAM), i.e. continuous dynamics and cost functions
 running_DAM = crocoddyl.DifferentialActionModelContactFwdDynamics(state, actuation, contactModel, runningCostModel, inv_damping=0., enable_force=True)
@@ -112,8 +112,8 @@ utils.plot_ddp_results(ddp_data, which_plots='all', labels=None, markers=['.'], 
 
 
 
-# # Display solution in Gepetto Viewer
-# display = crocoddyl.GepettoDisplay(robot, frameNames=['contact'])
-# display.displayFromSolver(ddp, factor=1)
+# Display solution in Gepetto Viewer
+display = crocoddyl.GepettoDisplay(robot, frameNames=['contact'])
+display.displayFromSolver(ddp, factor=1)
 
 
