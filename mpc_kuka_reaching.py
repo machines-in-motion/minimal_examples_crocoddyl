@@ -74,7 +74,7 @@ terminalModel = crocoddyl.IntegratedActionModelEuler(terminal_DAM, 0.)
 runningModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.])
 terminalModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.])
 # Create the shooting problem
-T = 50
+T = 100
 problem = crocoddyl.ShootingProblem(x0, [runningModel] * T, terminalModel)
 # Create solver + callbacks
 ddp = crocoddyl.SolverFDDP(problem)
@@ -95,20 +95,21 @@ ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
 ocp_params = {}
 ocp_params['N_h']          = T
 ocp_params['dt']           = dt
-ocp_params['maxiter']      = 100 
+ocp_params['maxiter']      = 10 
 ocp_params['pin_model']    = robot_simulator.pin_robot.model
 ocp_params['armature']     = runningModel.differential.armature
 ocp_params['id_endeff']    = endeff_frame_id
 ocp_params['active_costs'] = ddp.problem.runningModels[0].differential.costs.active.tolist()
-
 # Simu parameters
 sim_params = {}
 sim_params['sim_freq']  = int(1./env.dt)
 sim_params['mpc_freq']  = 1000
-sim_params['T_sim']     = 0.5
+sim_params['T_sim']     = 2.
 log_rate = 100
 # Initialize simulation data 
 sim_data = mpc_utils.init_sim_data(sim_params, ocp_params, x0)
+# Display target 
+mpc_utils.display_ball(endeff_translation, RADIUS=.05, COLOR=[1.,0.,0.,.6])
 # Simulate
 mpc_cycle = 0
 for i in range(sim_data['N_sim']): 

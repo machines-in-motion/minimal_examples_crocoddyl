@@ -6,6 +6,112 @@ import matplotlib.pyplot as plt
 import matplotlib
 import pin_utils
 
+import pybullet as p
+
+# Get contact wrench from robot simulator
+def get_contact_wrench(pybullet_simulator, id_endeff):
+    '''
+    Get contact wrench in LOCAL contact frame
+    '''
+    contact_points = p.getContactPoints()
+    force = np.zeros(6)
+    for ci in reversed(contact_points):
+        p_ct = np.array(ci[6])
+        contact_normal = ci[7]
+        normal_force = ci[9]
+        lateral_friction_direction_1 = ci[11]
+        lateral_friction_force_1 = ci[10]
+        lateral_friction_direction_2 = ci[13]
+        lateral_friction_force_2 = ci[12]
+        # Wrench in LOCAL contact frame
+        linear_LOCAL = np.array([normal_force, lateral_friction_force_1, lateral_friction_force_2])
+        wrench_LOCAL = np.concatenate([linear_LOCAL, np.zeros(3)])
+        # LOCAL contact placement
+        R_ct = np.vstack([np.array(contact_normal), np.array(lateral_friction_direction_1), np.array(lateral_friction_direction_2)]).T
+        M_ct = pin.SE3(R_ct, p_ct) 
+        # wrench LOCAL(p)-->WORLD
+        wrench_WORLD = M_ct.act(pin.Force(wrench_LOCAL))
+        # wrench WORLD-->LOCAL(EE)
+        wrench_croco = -pybullet_simulator.pin_robot.data.oMf[id_endeff].actInv(wrench_WORLD)
+        force =+ wrench_croco.vector
+        return force
+
+# Display
+def display_ball(p_des, RADIUS=.05, COLOR=[1.,1.,1.,1.]):
+    '''
+    Create a sphere visual object in PyBullet (no collision)
+    Transformed because reference p_des is in pinocchio WORLD frame, which is different
+    than PyBullet WORLD frame if the base placement in the simulator is not (eye(3), zeros(3))
+    INPUT: 
+        p_des           : desired position of the ball in pinocchio.WORLD
+        robot_base_pose : initial pose of the robot BASE in bullet.WORLD
+        RADIUS          : radius of the ball
+        COLOR           : color of the ball
+    '''
+    # pose of the sphere in bullet WORLD
+    M = pin.SE3(np.eye(3), p_des)  # ok for talos reduced since pin.W = bullet.W but careful with talos_arm if base is moved
+    quat = pin.SE3ToXYZQUAT(M)     
+    visualBallId = p.createVisualShape(shapeType=p.GEOM_SPHERE,
+                                       radius=RADIUS,
+                                       rgbaColor=COLOR,
+                                       visualFramePosition=quat[:3],
+                                       visualFrameOrientation=quat[3:])
+    ballId = p.createMultiBody(baseMass=0.,
+                               baseInertialFramePosition=[0.,0.,0.],
+                               baseVisualShapeIndex=visualBallId,
+                               basePosition=[0.,0.,0.],
+                               useMaximalCoordinates=True)
+
+    return ballId
+
+# Load contact surface in PyBullet for contact experiments
+def display_contact_surface(M, robotId=1, radius=.25, length=0.0, with_collision=False, TILT=[0., 0., 0.]):
+    '''
+    Creates contact surface object in PyBullet as a flat cylinder 
+      M       : contact placement (with z_LOCAL coinciding with cylinder axis)
+      robotId : id of the robot 
+    '''
+    # Tilt contact surface (default 0)
+    TILT_rotation = pin.utils.rpyToMatrix(TILT[0], TILT[1], TILT[2])
+    M.rotation = TILT_rotation.dot(M.rotation)
+    # Get quaternion
+    quat = pin.SE3ToXYZQUAT(M)
+    visualShapeId = p.createVisualShape(shapeType=p.GEOM_CYLINDER,
+                                        radius=radius,
+                                        length=length,
+                                        rgbaColor=[.1, .8, .1, .5],
+                                        visualFramePosition=quat[:3],
+                                        visualFrameOrientation=quat[3:])
+    # With collision
+    if(with_collision):
+      collisionShapeId = p.createCollisionShape(shapeType=p.GEOM_CYLINDER,
+                                                radius=radius,
+                                                height=length,
+                                                collisionFramePosition=quat[:3],
+                                                collisionFrameOrientation=quat[3:])
+      contactId = p.createMultiBody(baseMass=0.,
+                                        baseInertialFramePosition=[0.,0.,0.],
+                                        baseCollisionShapeIndex=collisionShapeId,
+                                        baseVisualShapeIndex=visualShapeId,
+                                        basePosition=[0.,0.,0.],
+                                        useMaximalCoordinates=True)
+                    
+      # Desactivate collisions for all links except end-effector of robot
+      # TODO: do not hard-code the PyBullet EE id
+      for i in range(p.getNumJoints(robotId)):
+        p.setCollisionFilterPair(contactId, robotId, -1, i, 0)
+      p.setCollisionFilterPair(contactId, robotId, -1, 8, 1)
+
+      return contactId
+    # Without collisions
+    else:
+      contactId = p.createMultiBody(baseMass=0.,
+                        baseInertialFramePosition=[0.,0.,0.],
+                        baseVisualShapeIndex=visualShapeId,
+                        basePosition=[0.,0.,0.],
+                        useMaximalCoordinates=True)
+      return contactId
+
 
 
 # Initialize simulation data for MPC simulation

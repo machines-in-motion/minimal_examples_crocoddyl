@@ -35,7 +35,11 @@ robot_simulator.forward_robot(q0, v0)
 print("[PyBullet] Created robot (id = "+str(robot_simulator.robotId)+")")
 
 # Display contact surface 
-
+contact_frame_id = robot_simulator.pin_robot.model.getFrameId("contact")
+contact_frame_placement = robot_simulator.pin_robot.data.oMf[contact_frame_id]
+offset = 0.03348 
+contact_frame_placement.translation = contact_frame_placement.act(np.array([0., 0., offset]))
+mpc_utils.display_contact_surface(contact_frame_placement, with_collision=True)
 
 # # # # # # # # # # # # # # #
 ###  SETUP CROCODDYL OCP  ###
@@ -49,7 +53,6 @@ terminalCostModel = crocoddyl.CostModelSum(state)
 # Contact model 
 contactModel = crocoddyl.ContactModelMultiple(state, actuation.nu)
 # Create 3D contact on the en-effector frame
-contact_frame_id = robot_simulator.pin_robot.model.getFrameId("contact")
 contact_position = robot_simulator.pin_robot.data.oMf[contact_frame_id].copy()
 baumgarte_gains  = np.array([0., 50.])
 contact3d = crocoddyl.ContactModel6D(state, contact_frame_id, contact_position, baumgarte_gains) 
@@ -82,12 +85,12 @@ terminalModel = crocoddyl.IntegratedActionModelEuler(terminal_DAM, 0.)
 runningModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.])
 terminalModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.])
 # Create the shooting problem
-T = 250
+T = 100
 problem = crocoddyl.ShootingProblem(x0, [runningModel] * T, terminalModel)
 # Create solver + callbacks
 ddp = crocoddyl.SolverFDDP(problem)
-ddp.setCallbacks([crocoddyl.CallbackLogger(),
-                crocoddyl.CallbackVerbose()])
+# ddp.setCallbacks([crocoddyl.CallbackLogger(),
+#                 crocoddyl.CallbackVerbose()])
 # Warm start : initial state + gravity compensation
 xs_init = [x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1])
@@ -102,7 +105,7 @@ ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
 ocp_params = {}
 ocp_params['N_h']          = T
 ocp_params['dt']           = dt
-ocp_params['maxiter']      = 100 
+ocp_params['maxiter']      = 10
 ocp_params['pin_model']    = robot_simulator.pin_robot.model
 ocp_params['armature']     = runningModel.differential.armature
 ocp_params['id_endeff']    = contact_frame_id
@@ -136,7 +139,7 @@ for i in range(sim_data['N_sim']):
         ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], isFeasible=False)
         sim_data['state_pred'][mpc_cycle, :, :]  = np.array(ddp.xs)
         sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(ddp.us)
-        sim_data ['force_pred'][mpc_cycle, :, :] = np.array([ddp.problem.runningDatas[i].differential.multibody.contacts.contacts['contact'].f.vector for i in range(config['N_h'])])
+        sim_data ['force_pred'][mpc_cycle, :, :] = np.array([ddp.problem.runningDatas[i].differential.multibody.contacts.contacts['contact'].f.vector for i in range(ocp_params['N_h'])])
         # Extract relevant predictions for interpolations
         x_curr = sim_data['state_pred'][mpc_cycle, 0, :]    # x0* = measured state    (q^,  v^ )
         x_pred = sim_data['state_pred'][mpc_cycle, 1, :]    # x1* = predicted state   (q1*, v1*) 
@@ -146,9 +149,8 @@ for i in range(sim_data['N_sim']):
         # Record costs references
         q = sim_data['state_pred'][mpc_cycle, 0, :sim_data['nq']]
         sim_data['ctrl_ref'][mpc_cycle, :]       = pin_utils.get_u_grav(q, ddp.problem.runningModels[0].differential.pinocchio, ocp_params['armature'])
-        sim_data['f_ee_ref'][mpc_cycle, :]     = m.differential.costs.costs['force'].cost.residual.reference.vector
+        sim_data['f_ee_ref'][mpc_cycle, :]       = ddp.problem.runningModels[0].differential.costs.costs['force'].cost.residual.reference.vector
         sim_data['state_ref'][mpc_cycle, :]      = ddp.problem.runningModels[0].differential.costs.costs['stateReg'].cost.residual.reference
-        sim_data['lin_pos_ee_ref'][mpc_cycle, :] = ddp.problem.runningModels[0].differential.costs.costs['translation'].cost.residual.reference
 
 
         # Select reference control and state for the current MPC cycle
@@ -185,8 +187,6 @@ for i in range(sim_data['N_sim']):
         # Update pinocchio model
         robot_simulator.forward_robot(q_mea_SIM_RATE, v_mea_SIM_RATE)
         f_mea_SIM_RATE = mpc_utils.get_contact_wrench(robot_simulator, sim_data['id_endeff'])
-        # if(i%50==0): 
-        # print(f_mea_SIM_RATE)
         # Record data (unnoised)
         x_mea_SIM_RATE = np.concatenate([q_mea_SIM_RATE, v_mea_SIM_RATE]).T 
         sim_data['state_mea_SIM_RATE'][i+1, :] = x_mea_SIM_RATE
