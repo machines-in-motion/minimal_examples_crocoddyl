@@ -104,7 +104,7 @@ ocp_params['active_costs'] = ddp.problem.runningModels[0].differential.costs.act
 # Simu parameters
 sim_params = {}
 sim_params['sim_freq']  = int(1./env.dt)
-sim_params['mpc_freq']  = 25   
+sim_params['mpc_freq']  = 0.5 #100 #25   
 sim_params['T_sim']     = 2.
 log_rate = 100
 # Initialize simulation data 
@@ -114,8 +114,10 @@ mpc_utils.display_ball(endeff_translation, RADIUS=.05, COLOR=[1.,0.,0.,.6])
 # Simulate
 mpc_cycle = 0
 ctrl_cycle = 0
-RICCATI_TYPE = 1
-Kv = 0.*np.eye(nv)
+# RICCATI_TYPE = 1 
+# INTERP_FEEDFORWARD = False
+# Kv = 0.*np.eye(nv)
+NAIVE = False
 for i in range(sim_data['N_sim']): 
 
     if(i%log_rate==0): 
@@ -139,6 +141,7 @@ for i in range(sim_data['N_sim']):
         x_curr = sim_data['state_pred'][mpc_cycle, 0, :]    # x0* = measured state    (q^,  v^ )
         x_pred = sim_data['state_pred'][mpc_cycle, 1, :]    # x1* = predicted state   (q1*, v1*) 
         u_curr = sim_data['ctrl_pred'][mpc_cycle, 0, :]     # u0* = optimal control   (tau0*)
+        u_pred = sim_data['ctrl_pred'][mpc_cycle, 1, :]     # u1* = predicted optimal control (tau1*)
         # Record costs references
         q = sim_data['state_pred'][mpc_cycle, 0, :sim_data['nq']]
         sim_data['ctrl_ref'][mpc_cycle, :]       = pin_utils.get_u_grav(q, ddp.problem.runningModels[0].differential.pinocchio, ocp_params['armature'])
@@ -151,32 +154,65 @@ for i in range(sim_data['N_sim']):
         u_ref_MPC_RATE  = u_curr 
         if(mpc_cycle==0):
             sim_data['state_des_MPC_RATE'][mpc_cycle, :]   = x_curr  
-        sim_data['ctrl_des_MPC_RATE'][mpc_cycle, :]    = u_ref_MPC_RATE   
-        sim_data['state_des_MPC_RATE'][mpc_cycle+1, :] = x_ref_MPC_RATE    
-        
+        sim_data['ctrl_des_MPC_RATE'][mpc_cycle, :]        = u_ref_MPC_RATE   
+        sim_data['state_des_MPC_RATE'][mpc_cycle+1, :]     = x_ref_MPC_RATE    
+
+        xs = ddp.xs.tolist()  
+        us = ddp.us.tolist()
+        K = ddp.K.tolist()
+        for iii in range(T-1):    
+          if iii == 0:    
+            xs_int = np.linspace(xs[iii].copy(), xs[iii+1].copy(), int(dt/sim_data['dt_sim']))   
+            us_int = np.linspace(us[iii].copy(), us[iii+1].copy(), int(dt/sim_data['dt_sim']))    
+            Klist = [K[iii].copy()] * int(dt/sim_data['dt_sim'])    
+          else:    
+            xs_int = np.vstack((xs_int, np.linspace(xs[iii].copy(), xs[iii+1].copy(), int(dt/sim_data['dt_sim']))))    
+            us_int = np.vstack((us_int, np.linspace(us[iii].copy(), us[iii+1].copy(), int(dt/sim_data['dt_sim']))))                  
+            Klist = Klist + [K[iii].copy()] * int(dt/sim_data['dt_sim'])
+
         # Increment planning counter
         mpc_cycle += 1
         ctrl_cycle = 0
 
     # Select reference control and state for the current SIMU cycle
     x_ref_SIM_RATE  = x_curr + ctrl_cycle*sim_data['ocp_to_sim_ratio'] * (x_pred - x_curr)
-    u_ref_SIM_RATE  = u_curr 
+
+    if(NAIVE):
+      u_ref_SIM_RATE  = u_curr #+ ctrl_cycle*sim_data['ocp_to_sim_ratio'] * (u_pred - u_curr)
+    else:  
+      u_ref_SIM_RATE  = us_int[ctrl_cycle] #u_curr #+ ctrl_cycle*sim_data['ocp_to_sim_ratio'] * (u_pred - u_curr)
+    # if(INTERP_FEEDFORWARD):
+    #     u_ref_SIM_RATE += ctrl_cycle*sim_data['ocp_to_sim_ratio'] * (u_pred - u_curr)
 
     # First prediction = measurement = initialization of MPC
     if(i==0):
         sim_data['state_des_SIM_RATE'][i, :]   = x_curr  
-    sim_data['ctrl_des_SIM_RATE'][i, :]    = u_ref_SIM_RATE  
-    sim_data['state_des_SIM_RATE'][i+1, :] = x_ref_SIM_RATE 
+    sim_data['ctrl_des_SIM_RATE'][i, :]        = u_ref_SIM_RATE  
+    sim_data['state_des_SIM_RATE'][i+1, :]     = x_ref_SIM_RATE 
 
-    # Add riccati gains using interp(x0, x1)
-    # print(np.linalg.norm(ddp.K[0]))
-    if(RICCATI_TYPE == 1):
-        u_ref_SIM_RATE += ddp.K[0] @ (x_ref_SIM_RATE - sim_data['state_mea_SIM_RATE'][i, :])
-    # Add riccati gains using x0
-    elif(RICCATI_TYPE == 2):
-        u_ref_SIM_RATE += ddp.K[0] @ (ddp.problem.x0 - sim_data['state_mea_SIM_RATE'][i, :])  
+    # Interpolate state 
+    # if(RICCATI_TYPE == 1):
+    # u_ref_SIM_RATE += ddp.K[0] @ (x_ref_SIM_RATE - sim_data['state_mea_SIM_RATE'][i, :])
+    # # Use x0
+    # elif(RICCATI_TYPE == 2):
+
+    if(NAIVE):
+      u_ref_SIM_RATE += ddp.K[0] @ (ddp.problem.x0 - sim_data['state_mea_SIM_RATE'][i, :])  
     else:
-        u_ref_SIM_RATE -= Kv @ sim_data['state_mea_SIM_RATE'][i, nq:]
+      u_ref_SIM_RATE += Klist[ctrl_cycle] @ (xs_int[ctrl_cycle] - sim_data['state_mea_SIM_RATE'][i, :])  
+
+    # # Interpolate gains + state 
+    # elif(RICCATI_TYPE == 3):
+    # Kinterp = ddp.K[0] + ctrl_cycle*sim_data['ocp_to_sim_ratio'] * (ddp.K[1] - ddp.K[0])
+    # u_ref_SIM_RATE += Kinterp @ (x_ref_SIM_RATE - sim_data['state_mea_SIM_RATE'][i, :]) 
+    # # Interpolate the whole feedabck 
+    # elif(RICCATI_TYPE == 4):
+    # ufb0 = ddp.K[0] @ (ddp.problem.x0 - sim_data['state_mea_SIM_RATE'][i, :])
+    # ufb1 = ddp.K[1] @ (x_pred - sim_data['state_mea_SIM_RATE'][i, :])
+    # ufb = ufb0 + ctrl_cycle*sim_data['ocp_to_sim_ratio'] * (ufb1 - ufb0)
+    # u_ref_SIM_RATE += ufb #Kinterp @ (x_ref_SIM_RATE - sim_data['state_mea_SIM_RATE'][i, :]) 
+    # else:
+    #     u_ref_SIM_RATE -= Kv @ sim_data['state_mea_SIM_RATE'][i, nq:]
 
     # Send torque to simulator & step simulator
     robot_simulator.send_joint_command(u_ref_SIM_RATE)
@@ -192,4 +228,4 @@ for i in range(sim_data['N_sim']):
 
 plot_data = mpc_utils.extract_plot_data_from_sim_data(sim_data)
 
-mpc_utils.plot_mpc_results(plot_data, which_plots=['u', 'x', 'ee_lin'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']/10))
+mpc_utils.plot_mpc_results(plot_data, which_plots=['u', 'x', 'ee_lin'], PLOT_PREDICTIONS=True) #pred_plot_sampling=int(sim_params['mpc_freq']/10))
