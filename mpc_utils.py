@@ -132,6 +132,7 @@ def init_sim_data(sim_params, ocp_params, x0):
     sim_data['dt_mpc'] = float(1./sim_data['mpc_freq'])                 # Duration of 1 planning cycle (s)
     sim_data['dt_sim'] = float(1./sim_data['sim_freq'])                # Duration of 1 simulation cycle (s)
     sim_data['ocp_to_mpc_ratio'] = sim_data['dt_mpc']/ocp_params['dt'] 
+    sim_data['ocp_to_sim_ratio'] = sim_data['dt_sim']/ocp_params['dt'] 
     # Copy OCP params
     sim_data['nq'] = ocp_params['pin_model'].nq
     sim_data['nv'] = ocp_params['pin_model'].nv
