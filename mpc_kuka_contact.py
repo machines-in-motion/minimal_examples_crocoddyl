@@ -81,9 +81,6 @@ terminal_DAM = crocoddyl.DifferentialActionModelContactFwdDynamics(state, actuat
 dt = 1e-2
 runningModel = crocoddyl.IntegratedActionModelEuler(running_DAM, dt)
 terminalModel = crocoddyl.IntegratedActionModelEuler(terminal_DAM, 0.)
-# Optionally add armature to take into account actuator's inertia
-runningModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.])
-terminalModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.])
 # Create the shooting problem
 T = 100
 problem = crocoddyl.ShootingProblem(x0, [runningModel] * T, terminalModel)
@@ -115,7 +112,7 @@ ocp_params['active_costs'] = ddp.problem.runningModels[0].differential.costs.act
 sim_params = {}
 sim_params['sim_freq']  = int(1./env.dt)
 sim_params['mpc_freq']  = 1000
-sim_params['T_sim']     = 0.5
+sim_params['T_sim']     = 2.
 log_rate = 100
 # Initialize simulation data 
 sim_data = mpc_utils.init_sim_data(sim_params, ocp_params, x0)

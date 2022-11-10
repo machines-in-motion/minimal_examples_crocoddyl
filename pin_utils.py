@@ -78,7 +78,7 @@ def get_v_(q, dq, model, id_endeff, ref=pin.LOCAL):
     '''
     data = model.createData()
     if(len(q) != len(dq)):
-        logger.error("q and dq must have the same size !")
+        print("q and dq must have the same size !")
     if(type(q)==np.ndarray and len(q.shape)==1):
         # J = pin.computeFrameJacobian(model, data, q, id_endeff)
         # v = J.dot(dq)[:3] 
@@ -180,7 +180,7 @@ def get_w_(q, dq, model, id_endeff, ref=pin.LOCAL):
     '''
     data = model.createData()
     if(len(q) != len(dq)):
-        logger.error("q and dq must have the same size !")
+        print("q and dq must have the same size !")
     if(type(q)==np.ndarray and len(q.shape)==1):
         pin.forwardKinematics(model, data, q, dq)
         spatial_vel =  pin.getFrameVelocity(model, data, id_endeff, ref)

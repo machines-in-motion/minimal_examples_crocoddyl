@@ -104,8 +104,8 @@ ocp_params['active_costs'] = ddp.problem.runningModels[0].differential.costs.act
 # Simu parameters
 sim_params = {}
 sim_params['sim_freq']  = int(1./env.dt)
-sim_params['mpc_freq']  = 0.5 #100 #25   
-sim_params['T_sim']     = 2.
+sim_params['mpc_freq']  = 1 #100 #25   
+sim_params['T_sim']     = 10.
 log_rate = 100
 # Initialize simulation data 
 sim_data = mpc_utils.init_sim_data(sim_params, ocp_params, x0)
@@ -118,7 +118,16 @@ ctrl_cycle = 0
 # INTERP_FEEDFORWARD = False
 # Kv = 0.*np.eye(nv)
 NAIVE = False
+T_force = 0
+dt_force = 100
+linkIndex = 7
+force = np.array([0., 100., 0])
+
 for i in range(sim_data['N_sim']): 
+    # External push
+    if T_force <= i  and i < T_force + dt_force :   
+        position = p.getLinkState(robot_simulator.robotId, linkIndex)[0]
+        p.applyExternalForce(objectUniqueId=robot_simulator.robotId, linkIndex=linkIndex, forceObj=force, posObj=position, flags=p.WORLD_FRAME)
 
     if(i%log_rate==0): 
         print("\n SIMU step "+str(i)+"/"+str(sim_data['N_sim'])+"\n")
@@ -214,6 +223,8 @@ for i in range(sim_data['N_sim']):
     # else:
     #     u_ref_SIM_RATE -= Kv @ sim_data['state_mea_SIM_RATE'][i, nq:]
 
+    # Simulate actuation 
+    # u_ref_SIM_RATE = 0.9 * u_ref_SIM_RATE 
     # Send torque to simulator & step simulator
     robot_simulator.send_joint_command(u_ref_SIM_RATE)
     env.step()
@@ -228,4 +239,4 @@ for i in range(sim_data['N_sim']):
 
 plot_data = mpc_utils.extract_plot_data_from_sim_data(sim_data)
 
-mpc_utils.plot_mpc_results(plot_data, which_plots=['u', 'x', 'ee_lin'], PLOT_PREDICTIONS=True) #pred_plot_sampling=int(sim_params['mpc_freq']/10))
+mpc_utils.plot_mpc_results(plot_data, which_plots=['all'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']/10))
