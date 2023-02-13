@@ -81,26 +81,34 @@ runningModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.]
 terminalModel.differential.armature = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.])
 
 # Create the shooting problem
-T = 250
+T = 100
 problem = crocoddyl.ShootingProblem(x0, [runningModel] * T, terminalModel)
 
 # Create solver + callbacks
-ddp = crocoddyl.SolverFDDP(problem)
+
+# FDDP
+fddp = crocoddyl.SolverFDDP(problem)
+fddp.setCallbacks([crocoddyl.CallbackLogger(),
+                crocoddyl.CallbackVerbose()])
+xs_init = [x0 for i in range(T+1)]
+us_init = fddp.problem.quasiStatic(xs_init[:-1])
+fddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
+
+print('-----')
+# GNMS
+ddp = crocoddyl.SolverGNMS(problem)
 ddp.setCallbacks([crocoddyl.CallbackLogger(),
                 crocoddyl.CallbackVerbose()])
-# Warm start : initial state + gravity compensation
-xs_init = [x0 for i in range(T+1)]
-us_init = ddp.problem.quasiStatic(xs_init[:-1])
+xs_init = [x0 for i in range(T+1)] #fddp.xs #[x0 for i in range(T+1)]
+us_init = ddp.problem.quasiStatic(xs_init[:-1]) #fddp.us #ddp.problem.quasiStatic(xs_init[:-1])
+ddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
 
-# Solve
-ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
+# # Extract DDP data and plot
+# ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')
 
-# Extract DDP data and plot
-ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')
+# ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
 
-ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
-
-# Display solution in Gepetto Viewer
-display = crocoddyl.GepettoDisplay(robot)
-display.displayFromSolver(ddp, factor=1)
+# # Display solution in Gepetto Viewer
+# display = crocoddyl.GepettoDisplay(robot)
+# display.displayFromSolver(ddp, factor=1)
 
