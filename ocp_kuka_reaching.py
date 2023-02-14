@@ -8,6 +8,7 @@ import numpy as np
 import pinocchio as pin
 np.set_printoptions(precision=4, linewidth=180)
 import ocp_utils
+from gnms_merit import GNMS_linesearch
 
 # # # # # # # # # # # # #
 ### LOAD ROBOT MODEL  ###
@@ -96,11 +97,13 @@ fddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
 
 print('-----')
 # GNMS
-ddp = crocoddyl.SolverGNMS(problem)
-ddp.setCallbacks([crocoddyl.CallbackLogger(),
-                crocoddyl.CallbackVerbose()])
+# ddp = crocoddyl.SolverGNMS(problem)
+ddp = GNMS_linesearch(problem)
+# ddp.setCallbacks([crocoddyl.CallbackLogger(),
+#                 crocoddyl.CallbackVerbose()])
 xs_init = [x0 for i in range(T+1)] #fddp.xs #[x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1]) #fddp.us #ddp.problem.quasiStatic(xs_init[:-1])
+# ddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
 ddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
 
 # # Extract DDP data and plot
