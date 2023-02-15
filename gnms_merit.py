@@ -24,37 +24,50 @@ class GNMS_linesearch(SolverGNMS):
     def __init__(self, shootingProblem):
         SolverGNMS.__init__(self, shootingProblem)
         # self.ddp = crocoddyl.SolverGNMS(shootingProblem)
-        self.ln_max = 10
-        self.mu = 1e10
+        self.ln_max = 50
+        self.mu = 1e-5
 
     def merit(self):
         return self.cost + self.mu * self.compute_gaps()
         
     def merit_try(self):
-        return self.cost_try + self.mu * np.linalg.norm(list(self.fs_try), 1)
+        return self.cost_try + self.mu * np.sum(abs(np.array(list(self.fs_try))))
 
     def compute_gaps(self):
-        return np.linalg.norm(list(self.fs), 1)
+        return np.sum(abs(np.array(list(self.fs))))
 
     def solve(self, xs, us, maxiter=20, isFeasible=False):
         xs_ = list(self.xs)
         us_ = list(self.us)
+
         self.setCandidate(xs, us, False)
+        self.xs[0] = self.problem.x0
+
         for i in range(maxiter):
+            # self.calc()
             self.calcDiff()
-            self.backwardPass()
-            self.cost_try = np.inf
+            # print(self.cost)
+            while True:
+                try:
+                    self.backwardPass()
+                except:
+                    self.increaseRegularization()
+                break
+
             set_line_step = 1
             it = 0 
 
             self.forwardPass(set_line_step)
-            while self.merit_try() > self.merit() and it > self.ln_max:
+            print(self.merit_try() > self.merit())
+            while self.merit_try() > self.merit() and it < self.ln_max:
+                # print("hello")
                 set_line_step *= 0.5
                 self.forwardPass(set_line_step)
                 # print(self.merit_try(), self.merit(), set_line_step)
                 it += 1
 
-            print("iteration", i, "cost", self.cost, "gaps", self.compute_gaps(), "merit", self.merit())
+
+            print("iteration", i, "step", set_line_step, "cost", self.cost, "gaps", self.compute_gaps(), "merit", self.merit())
 
             if abs(self.merit_try() - self.merit() ) < 1e-6 or self.ln_max == it:
                 print("Breaking no improvement")

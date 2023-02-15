@@ -93,7 +93,7 @@ fddp.setCallbacks([crocoddyl.CallbackLogger(),
                 crocoddyl.CallbackVerbose()])
 xs_init = [x0 for i in range(T+1)]
 us_init = fddp.problem.quasiStatic(xs_init[:-1])
-fddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
+fddp.solve([], [], maxiter=20, isFeasible=False)
 
 print('-----')
 # GNMS
@@ -104,7 +104,7 @@ ddp = GNMS_linesearch(problem)
 xs_init = [x0 for i in range(T+1)] #fddp.xs #[x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1]) #fddp.us #ddp.problem.quasiStatic(xs_init[:-1])
 # ddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
-ddp.solve(xs_init, us_init, maxiter=20, isFeasible=False)
+ddp.solve([], [], maxiter=20, isFeasible=False)
 
 # # Extract DDP data and plot
 # ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')

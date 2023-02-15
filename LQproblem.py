@@ -151,6 +151,8 @@ class IntegratedActionModelLQ(crocoddyl.IntegratedActionModelEuler):
 
 
 if __name__ == "__main__":
+    from gnms_merit import GNMS_linesearch
+
     print(" Testing with DDP ".center(LINE_WIDTH, "#"))
     lq_diff_running = DifferentialActionModelLQ()
     lq_diff_terminal = DifferentialActionModelLQ(isTerminal=True)
@@ -165,7 +167,9 @@ if __name__ == "__main__":
     problem = crocoddyl.ShootingProblem(x0, [lq_running] * horizon, lq_terminal)
     print(" Constructing shooting problem completed ".center(LINE_WIDTH, "-"))
 
-    ddp = crocoddyl.SolverGNMS(problem)
+    ddp = GNMS_linesearch(problem)
+    # ddp = crocoddyl.SolverGNMS(problem)
+
     print(" Constructing DDP solver completed ".center(LINE_WIDTH, "-"))
     ddp.setCallbacks([crocoddyl.CallbackLogger(), crocoddyl.CallbackVerbose()])
     xs = [x0] * (horizon + 1)
