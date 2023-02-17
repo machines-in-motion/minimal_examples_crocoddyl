@@ -9,7 +9,6 @@ For OCP scripts
 - [matplotlib](https://matplotlib.org/)
 
 For MPC simulations 
-- [PyBullet](https://pybullet.org/wordpress/)
 - [bullet_utils](https://github.com/machines-in-motion/bullet_utils) 
 
 
