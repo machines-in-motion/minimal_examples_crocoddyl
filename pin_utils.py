@@ -5,6 +5,7 @@ import eigenpy
 from numpy.linalg import pinv
 import time
 import matplotlib.pyplot as plt
+import hppfcl
 
 
 # Rotate placement
@@ -386,3 +387,37 @@ def IK_placement(robot, q0, frame_id, oMf_des, LOGS=False, DT=1e-2, IT_MAX=1000,
         # vq = - J.T.dot(np.linalg.solve(J.dot(J.T) + DAMP * np.eye(6), err))
         q = pin.integrate(model, q, vq * DT)
     return q, vq, errs
+
+
+
+def add_capsule_with_segment(robotWrapperCollision, nameObject, idJoint, radius, length, M, colorCapsule=[.2,.7,0.98,.5],colorSegment=[1.,0.,0.,1.]) :
+    """
+    Create a capsule to encapsulate a robot body part.
+    Also create a segment that will go from a capsule extremity to an other through its center. This can be interesting when visualizing capsules.
+    Add it to geometry datas of the robot.
+
+    :param robotWrapperCollision: Robot wrapper dealing with collision datas
+    :param nameObject: Name of considered body part
+    :param idJoint: Identifier of the considered joint in robot collision datas
+    :param radius: Radius of the capsule
+    :param length: Half length of the capsule
+    :param M: rotation and translation
+    :param colorCapsule: Color of the capsule (play on transparency to see segment)
+    :param colorSegment: Color of the segment
+    :return: Names of the capsule and the segment created
+    """
+    # Create all the names needed
+    jointName, bodyName = [nameObject + "_joint", nameObject + "_body"]
+    capsuleName = "capsule_" + jointName
+    segmentName = "segment_" + jointName
+
+    #Creation of capusle and segment
+    capsule = hppfcl.Capsule(capsuleName, idJoint, radius, length, M,color=colorCapsule)
+    segment = hppfcl.Capsule(segmentName, idJoint, 0., length, M, color=colorSegment)
+
+    robotWrapperCollision.addGeomInCollision(capsule)
+    robotWrapperCollision.addGeomInVisual(capsule)
+    robotWrapperCollision.addGeomInCollision(segment)
+    robotWrapperCollision.addGeomInVisual(hppfcl.Capsule(segmentName, idJoint, 0.001, length, M, color=colorSegment))
+
+    return capsuleName, segmentName
