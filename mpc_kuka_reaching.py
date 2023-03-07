@@ -7,7 +7,7 @@ import crocoddyl
 import numpy as np
 np.set_printoptions(precision=4, linewidth=180)
 
-import pin_utils, mpc_utils
+import pin_utils, mpc_utils, perf_utils
 
 from bullet_utils.env import BulletEnvWithGround
 from robot_properties_kuka.iiwaWrapper import IiwaRobot
@@ -109,6 +109,9 @@ sim_data = mpc_utils.init_sim_data(sim_params, ocp_params, x0)
 mpc_utils.display_ball(endeff_translation, RADIUS=.05, COLOR=[1.,0.,0.,.6])
 # Simulate
 mpc_cycle = 0
+
+bench = perf_utils.MPCBenchmark()
+
 for i in range(sim_data['N_sim']): 
 
     if(i%log_rate==0): 
@@ -124,7 +127,10 @@ for i in range(sim_data['N_sim']):
         us_init = list(ddp.us[1:]) + [ddp.us[-1]] 
         
         # Solve OCP & record MPC predictions
+        bench.start_croco_profiler()
         ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], isFeasible=False)
+        bench.stop_croco_profiler()
+        bench.record_profiles()
         sim_data['state_pred'][mpc_cycle, :, :]  = np.array(ddp.xs)
         sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(ddp.us)
         # Extract relevant predictions for interpolations
@@ -174,4 +180,8 @@ for i in range(sim_data['N_sim']):
 
 plot_data = mpc_utils.extract_plot_data_from_sim_data(sim_data)
 
-mpc_utils.plot_mpc_results(plot_data, which_plots=['all'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']/10))
+bench.plot_profile('ShootingProblem::calcDiff')
+bench.plot_profile('SolverFDDP::solve')
+bench.plot_avg_profiles()
+bench.plot_profiles()
+# mpc_utils.plot_mpc_results(plot_data, which_plots=['all'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']/10))
