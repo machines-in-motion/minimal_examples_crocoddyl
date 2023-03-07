@@ -74,7 +74,8 @@ terminalModel = crocoddyl.IntegratedActionModelEuler(terminal_DAM, 0.)
 T = 100
 problem = crocoddyl.ShootingProblem(x0, [runningModel] * T, terminalModel)
 # Create solver + callbacks
-ddp = crocoddyl.SolverFDDP(problem)
+# ddp = crocoddyl.SolverFDDP(problem)
+ddp = crocoddyl.SolverGNMS(problem)
 # ddp.setCallbacks([crocoddyl.CallbackLogger(),
 #                   crocoddyl.CallbackVerbose()])
 # Warm start : initial state + gravity compensation

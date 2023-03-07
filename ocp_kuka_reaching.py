@@ -98,7 +98,7 @@ fddp.solve([], [], maxiter=20, isFeasible=False)
 print('-----')
 # GNMS
 # ddp = crocoddyl.SolverGNMS(problem)
-ddp = GNMS_linesearch(problem)
+ddp = crocoddyl.SolverGNMS(problem)
 # ddp.setCallbacks([crocoddyl.CallbackLogger(),
 #                 crocoddyl.CallbackVerbose()])
 xs_init = [x0 for i in range(T+1)] #fddp.xs #[x0 for i in range(T+1)]

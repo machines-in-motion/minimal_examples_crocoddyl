@@ -17,23 +17,23 @@ class MPCBenchmark:
         
         self.profiles = []
 
-        self.profiles.append('SolverDDP::Qu')
-        self.profiles.append('SolverDDP::Quu')
-        self.profiles.append('SolverDDP::Quu_inv')
-        self.profiles.append('SolverDDP::Qx')
-        self.profiles.append('SolverDDP::Qxu')
-        self.profiles.append('SolverDDP::Qxx')
-        self.profiles.append('SolverDDP::Vxx')
-        self.profiles.append('SolverDDP::computeGains')
+        # self.profiles.append('SolverDDP::Qu')
+        # self.profiles.append('SolverDDP::Quu')
+        # self.profiles.append('SolverDDP::Quu_inv')
+        # self.profiles.append('SolverDDP::Qx')
+        # self.profiles.append('SolverDDP::Qxu')
+        # self.profiles.append('SolverDDP::Qxx')
+        # self.profiles.append('SolverDDP::Vxx')
+        # self.profiles.append('SolverDDP::computeGains')
 
-        self.profiles.append('ShootingProblem::calc')
-        self.profiles.append('ShootingProblem::calcDiff')
-        self.profiles.append('SolverDDP::backwardPass')
-        self.profiles.append('SolverDDP::calcDiff')
-        self.profiles.append('SolverDDP::computeDirection')
-        self.profiles.append('SolverDDP::tryStep')
-        self.profiles.append('SolverFDDP::forwardPass')
-        self.profiles.append('SolverFDDP::solve')
+        # self.profiles.append('ShootingProblem::calc')
+        # self.profiles.append('ShootingProblem::calcDiff')
+        # self.profiles.append('SolverGNMS::backwardPass')
+        # self.profiles.append('SolverGNMS::calcDiff')
+        self.profiles.append('SolverGNMS::computeDirection')
+        self.profiles.append('SolverGNMS::tryStep')
+        self.profiles.append('SolverGNMS::forwardPass')
+        self.profiles.append('SolverGNMS::solve')
 
         self.avg = {}
         self.min = {}
