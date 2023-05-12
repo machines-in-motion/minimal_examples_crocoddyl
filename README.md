@@ -17,7 +17,7 @@ For the reaching task, run `python ocp_kuka_reaching.py` to solve the OCP and vi
 
 The scripts are minimal and self-explanatory. The machinery for data extraction and plotting is hidden in the utils. 
 
-# Copyrights
+# Copyrights
 Copyright(c) 2019-2023 New York University
 
 # License
