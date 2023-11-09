@@ -9,8 +9,8 @@ import pinocchio as pin
 np.set_printoptions(precision=4, linewidth=180)
 import pin_utils, mpc_utils
 
-from bullet_utils.env import BulletEnvWithGround
-from robot_properties_kuka.iiwaWrapper import IiwaRobot
+from mim_robots.pybullet.env import BulletEnvWithGround
+from mim_robots.robot_loader import load_bullet_wrapper
 import pybullet as p
 import pinocchio as pin
 
@@ -20,7 +20,7 @@ import pinocchio as pin
 # Simulation environment
 env = BulletEnvWithGround(p.GUI, dt=1e-3)
 # Robot simulator 
-robot_simulator = IiwaRobot()
+robot_simulator = load_bullet_wrapper("iiwa")
 # Extract robot model
 nq = robot_simulator.pin_robot.model.nq
 nv = robot_simulator.pin_robot.model.nv
@@ -55,7 +55,8 @@ contactModel = crocoddyl.ContactModelMultiple(state, actuation.nu)
 # Create 3D contact on the en-effector frame
 contact_position = robot_simulator.pin_robot.data.oMf[contact_frame_id].copy()
 baumgarte_gains  = np.array([0., 50.])
-contact3d = crocoddyl.ContactModel6D(state, contact_frame_id, contact_position, baumgarte_gains) 
+pinRef = pin.LOCAL_WORLD_ALIGNED
+contact3d = crocoddyl.ContactModel6D(state, contact_frame_id, contact_position, pinRef, baumgarte_gains) 
 # Populate contact model with contacts
 contactModel.addContact("contact", contact3d, active=True)
 # Create cost terms 
@@ -92,7 +93,7 @@ ddp = crocoddyl.SolverFDDP(problem)
 xs_init = [x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1])
 # Solve
-ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
+ddp.solve(xs_init, us_init, maxiter=100, is_feasible=False)
 
 
 # # # # # # # # # # # #
@@ -133,7 +134,7 @@ for i in range(sim_data['N_sim']):
         us_init = list(ddp.us[1:]) + [ddp.us[-1]] 
         
         # Solve OCP & record MPC predictions
-        ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], isFeasible=False)
+        ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], is_feasible=False)
         sim_data['state_pred'][mpc_cycle, :, :]  = np.array(ddp.xs)
         sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(ddp.us)
         sim_data ['force_pred'][mpc_cycle, :, :] = np.array([ddp.problem.runningDatas[i].differential.multibody.contacts.contacts['contact'].f.vector for i in range(ocp_params['N_h'])])

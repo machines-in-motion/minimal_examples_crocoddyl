@@ -3,14 +3,14 @@ Demo scripts to quickly get started with Crocoddyl and MPC
 
 
 # Dependencies
-For OCP scripts
-- [robot_properties_kuka](https://github.com/machines-in-motion/robot_properties_kuka)
+For OCP and MPC scripts
+- [mim_robots](https://github.com/machines-in-motion/mim_robots)
 - [Crocoddyl](https://github.com/loco-3d/crocoddyl) 
 - [matplotlib](https://matplotlib.org/)
 
-For MPC simulations 
-- [bullet_utils](https://github.com/machines-in-motion/bullet_utils) 
-
+For visualization (optional)
+- [meshcat](https://github.com/meshcat-dev/meshcat) 
+- [gepetto-viewer](https://github.com/Gepetto/gepetto-viewer) 
 
 # Usage
 For the reaching task, run `python ocp_kuka_reaching.py` to solve the OCP and visualize / plot the solution. Run `python mpc_kuka_reaching.py` to simulate it in MPC in PyBullet. Same for contact task.

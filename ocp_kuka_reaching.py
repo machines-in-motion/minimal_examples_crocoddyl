@@ -5,23 +5,14 @@ static target reaching task
 
 import crocoddyl
 import numpy as np
-import pinocchio as pin
-np.set_printoptions(precision=4, linewidth=180)
 import ocp_utils
 
 # # # # # # # # # # # # #
 ### LOAD ROBOT MODEL  ###
 # # # # # # # # # # # # #
 
-# # Load robot model directly from URDF & mesh files
-# from pinocchio.robot_wrapper import RobotWrapper
-# urdf_path = '/home/skleff/robot_properties_kuka/urdf/iiwa.urdf'
-# mesh_path = '/home/skleff/robot_properties_kuka'
-# robot = RobotWrapper.BuildFromURDF(urdf_path, mesh_path) 
-
-# Or use robot_properties_kuka 
-from robot_properties_kuka.config import IiwaConfig
-robot = IiwaConfig.buildRobotWrapper()
+from mim_robots.robot_loader import load_pinocchio_wrapper
+robot = load_pinocchio_wrapper("iiwa")
 
 model = robot.model
 nq = model.nq; nv = model.nv; nu = nq; nx = nq+nv
@@ -46,15 +37,14 @@ terminalCostModel = crocoddyl.CostModelSum(state)
 
 
 # Create cost terms 
-  # Control regularization cost
+# Control regularization cost
 uResidual = crocoddyl.ResidualModelControlGrav(state)
 uRegCost = crocoddyl.CostModelResidual(state, uResidual)
-  # State regularization cost
+# State regularization cost
 xResidual = crocoddyl.ResidualModelState(state, x0)
 xRegCost = crocoddyl.CostModelResidual(state, xResidual)
-  # endeff frame translation cost
+# endeff frame translation cost
 endeff_frame_id = model.getFrameId("contact")
-# endeff_translation = robot.data.oMf[endeff_frame_id].translation.copy()
 endeff_translation = np.array([-0.4, 0.3, 0.7]) # move endeff +10 cm along x in WORLD frame
 frameTranslationResidual = crocoddyl.ResidualModelFrameTranslation(state, endeff_frame_id, endeff_translation)
 frameTranslationCost = crocoddyl.CostModelResidual(state, frameTranslationResidual)
@@ -88,16 +78,16 @@ problem = crocoddyl.ShootingProblem(x0, [runningModel] * T, terminalModel)
 ddp = crocoddyl.SolverFDDP(problem)
 ddp.setCallbacks([crocoddyl.CallbackLogger(),
                 crocoddyl.CallbackVerbose()])
+
 # Warm start : initial state + gravity compensation
 xs_init = [x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1])
 
 # Solve
-ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
+ddp.solve(xs_init, us_init, maxiter=100, is_feasible=False)
 
 # Extract DDP data and plot
 ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')
-
 ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
 
 # Display solution in Gepetto Viewer

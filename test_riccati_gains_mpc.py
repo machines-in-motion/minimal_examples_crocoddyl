@@ -9,8 +9,8 @@ np.set_printoptions(precision=4, linewidth=180)
 
 import pin_utils, mpc_utils
 
-from bullet_utils.env import BulletEnvWithGround
-from robot_properties_kuka.iiwaWrapper import IiwaRobot
+from mim_robots.pybullet.env import BulletEnvWithGround
+from mim_robots.robot_loader import load_bullet_wrapper
 import pybullet as p
 
 
@@ -20,7 +20,7 @@ import pybullet as p
 # Simulation environment
 env = BulletEnvWithGround(p.GUI, dt=1e-3)
 # Robot simulator 
-robot_simulator = IiwaRobot()
+robot_simulator = load_bullet_wrapper("iiwa")
 # Extract robot model
 nq = robot_simulator.pin_robot.model.nq
 nv = robot_simulator.pin_robot.model.nv
@@ -85,7 +85,7 @@ ddp = crocoddyl.SolverFDDP(problem)
 xs_init = [x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1])
 # Solve
-ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
+ddp.solve(xs_init, us_init, maxiter=100, is_feasible=False)
 
 
 
@@ -142,7 +142,7 @@ for i in range(sim_data['N_sim']):
         us_init = list(ddp.us[1:]) + [ddp.us[-1]] 
 
         # Solve OCP & record MPC predictions
-        solved = ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], isFeasible=False)
+        solved = ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], is_feasible=False)
         print(solved)
         sim_data['state_pred'][mpc_cycle, :, :]  = np.array(ddp.xs)
         sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(ddp.us)
@@ -239,4 +239,4 @@ for i in range(sim_data['N_sim']):
 
 plot_data = mpc_utils.extract_plot_data_from_sim_data(sim_data)
 
-mpc_utils.plot_mpc_results(plot_data, which_plots=['all'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']/10))
+mpc_utils.plot_mpc_results(plot_data, which_plots=['all'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']))
