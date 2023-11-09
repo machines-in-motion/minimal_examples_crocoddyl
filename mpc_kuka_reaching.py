@@ -9,8 +9,8 @@ np.set_printoptions(precision=4, linewidth=180)
 
 import pin_utils, mpc_utils
 
-from bullet_utils.env import BulletEnvWithGround
-from robot_properties_kuka.iiwaWrapper import IiwaRobot
+from mim_robots.pybullet.env import BulletEnvWithGround
+from mim_robots.robot_loader import load_bullet_wrapper
 import pybullet as p
 
 
@@ -20,7 +20,9 @@ import pybullet as p
 # Simulation environment
 env = BulletEnvWithGround(p.GUI, dt=1e-3)
 # Robot simulator 
-robot_simulator = IiwaRobot()
+robot_simulator = load_bullet_wrapper("iiwa")
+env.add_robot(robot_simulator)
+
 # Extract robot model
 nq = robot_simulator.pin_robot.model.nq
 nv = robot_simulator.pin_robot.model.nv
@@ -45,13 +47,13 @@ actuation = crocoddyl.ActuationModelFull(state)
 runningCostModel = crocoddyl.CostModelSum(state)
 terminalCostModel = crocoddyl.CostModelSum(state)
 # Create cost terms 
-  # Control regularization cost
+# Control regularization cost
 uResidual = crocoddyl.ResidualModelControlGrav(state)
 uRegCost = crocoddyl.CostModelResidual(state, uResidual)
-  # State regularization cost
+# State regularization cost
 xResidual = crocoddyl.ResidualModelState(state, x0)
 xRegCost = crocoddyl.CostModelResidual(state, xResidual)
-  # endeff frame translation cost
+# endeff frame translation cost
 endeff_frame_id = robot_simulator.pin_robot.model.getFrameId("contact")
 # endeff_translation = robot.data.oMf[endeff_frame_id].translation.copy()
 endeff_translation = np.array([-0.4, 0.3, 0.7]) # move endeff +10 cm along x in WORLD frame
@@ -81,7 +83,7 @@ ddp = crocoddyl.SolverFDDP(problem)
 xs_init = [x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1])
 # Solve
-ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
+ddp.solve(xs_init, us_init, maxiter=100, is_feasible=False)
 
 
 
@@ -124,7 +126,7 @@ for i in range(sim_data['N_sim']):
         us_init = list(ddp.us[1:]) + [ddp.us[-1]] 
         
         # Solve OCP & record MPC predictions
-        ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], isFeasible=False)
+        ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], is_feasible=False)
         sim_data['state_pred'][mpc_cycle, :, :]  = np.array(ddp.xs)
         sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(ddp.us)
         # Extract relevant predictions for interpolations

@@ -7,6 +7,8 @@ import matplotlib
 import pin_utils
 
 import pybullet as p
+import os
+
 
 # Get contact wrench from robot simulator
 def get_contact_wrench(pybullet_simulator, id_endeff):
@@ -430,7 +432,8 @@ def plot_mpc_state(plot_data, PLOT_PREDICTIONS=False,
     if(SAVE):
         figs = {'x': fig_x}
         if(SAVE_DIR is None):
-            SAVE_DIR = '/home/skleff/force-feedback/data'
+            print("SAVE FIGURES IN HOME")
+            SAVE_DIR = os.environ['HOME']
         if(SAVE_NAME is None):
             SAVE_NAME = 'testfig'
         for name, fig in figs.items():
@@ -527,7 +530,8 @@ def plot_mpc_control(plot_data, PLOT_PREDICTIONS=False,
     if(SAVE):
         figs = {'u': fig_u}
         if(SAVE_DIR is None):
-            SAVE_DIR = '/home/skleff/force-feedback/data'
+            print("SAVE FIGURES IN HOME")    
+            SAVE_DIR = os.environ['HOME']
         if(SAVE_NAME is None):
             SAVE_NAME = 'testfig'
         for name, fig in figs.items():
@@ -652,7 +656,8 @@ def plot_mpc_endeff_linear(plot_data, PLOT_PREDICTIONS=False,
     if(SAVE):
         figs = {'ee_lin': fig}
         if(SAVE_DIR is None):
-            SAVE_DIR = '/home/skleff/force-feedback/data'
+            print("SAVE FIGURES IN HOME")
+            SAVE_DIR = os.environ['HOME']
         if(SAVE_NAME is None):
             SAVE_NAME = 'testfig'
         for name, fig in figs.items():
@@ -777,7 +782,8 @@ def plot_mpc_endeff_angular(plot_data, PLOT_PREDICTIONS=False,
     if(SAVE):
         figs = {'ee_ang': fig}
         if(SAVE_DIR is None):
-            SAVE_DIR = '/home/skleff/force-feedback/data'
+            print("SAVE FIGURES IN HOME")
+            SAVE_DIR = os.environ['HOME']
         if(SAVE_NAME is None):
             SAVE_NAME = 'testfig'
         for name, fig in figs.items():
@@ -894,7 +900,8 @@ def plot_mpc_force(plot_data, PLOT_PREDICTIONS=False,
     if(SAVE):
         figs = {'f': fig}
         if(SAVE_DIR is None):
-            SAVE_DIR = '/home/skleff/force-feedback/data'
+            print("SAVE FIGURES IN HOME")
+            SAVE_DIR = os.environ['HOME']
         if(SAVE_NAME is None):
             SAVE_NAME = 'testfig'
         for name, fig in figs.items():
