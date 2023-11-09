@@ -3,13 +3,10 @@ Demo scripts to quickly get started with Crocoddyl and MPC
 
 
 # Dependencies
-For OCP scripts
+For OCP and MPC scripts
 - [mim_robots](https://github.com/machines-in-motion/mim_robots)
 - [Crocoddyl](https://github.com/loco-3d/crocoddyl) 
 - [matplotlib](https://matplotlib.org/)
-
-For MPC simulations 
-- [bullet_utils](https://github.com/machines-in-motion/bullet_utils) 
 
 For visualization (optional)
 - [meshcat](https://github.com/meshcat-dev/meshcat) 
