@@ -2,26 +2,17 @@
 Example script : Crocoddyl OCP with KUKA arm 
 contact force task 
 '''
-
 import crocoddyl
 import pinocchio
 import numpy as np
-np.set_printoptions(precision=4, linewidth=180)
 import pin_utils, ocp_utils
 
 # # # # # # # # # # # # #
 ### LOAD ROBOT MODEL  ###
 # # # # # # # # # # # # #
 
-# # Load robot model directly from URDF & mesh files
-# from pinocchio.robot_wrapper import RobotWrapper
-# urdf_path = '/home/skleff/robot_properties_kuka/urdf/iiwa.urdf'
-# mesh_path = '/home/skleff/robot_properties_kuka'
-# robot = RobotWrapper.BuildFromURDF(urdf_path, mesh_path) 
-
-# Or use robot_properties_kuka 
-from robot_properties_kuka.config import IiwaConfig
-robot = IiwaConfig.buildRobotWrapper()
+from mim_robots.robot_loader import load_pinocchio_wrapper
+robot = load_pinocchio_wrapper("iiwa")
 
 model = robot.model
 nq = model.nq; nv = model.nv; nu = nq; nx = nq+nv
@@ -51,20 +42,20 @@ contactModel = crocoddyl.ContactModelMultiple(state, actuation.nu)
 contact_frame_id = model.getFrameId("contact")
 contact_position = robot.data.oMf[contact_frame_id].copy()
 baumgarte_gains  = np.array([0., 50.])
-contact3d = crocoddyl.ContactModel6D(state, contact_frame_id, contact_position, baumgarte_gains) 
+pinRef = pinocchio.LOCAL_WORLD_ALIGNED
+contact3d = crocoddyl.ContactModel6D(state, contact_frame_id, contact_position, pinRef, baumgarte_gains) 
 
 # Populate contact model with contacts
 contactModel.addContact("contact", contact3d, active=True)
 
-
 # Create cost terms 
-  # Control regularization cost
+# Control regularization cost
 uResidual = crocoddyl.ResidualModelContactControlGrav(state)
 uRegCost = crocoddyl.CostModelResidual(state, uResidual)
-  # State regularization cost
+# State regularization cost
 xResidual = crocoddyl.ResidualModelState(state, x0)
 xRegCost = crocoddyl.CostModelResidual(state, xResidual)
-  # End-effector frame force cost
+# End-effector frame force cost
 desired_wrench = np.array([0., 0., -20., 0., 0., 0.])
 frameForceResidual = crocoddyl.ResidualModelContactForce(state, contact_frame_id, pinocchio.Force(desired_wrench), 6, actuation.nu)
 contactForceCost = crocoddyl.CostModelResidual(state, frameForceResidual)
@@ -101,15 +92,13 @@ xs_init = [x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1])
 
 # Solve
-ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
+ddp.solve(xs_init, us_init, maxiter=100, is_feasible=False)
 
 
 # Extract DDP data and plot
 ddp_data = {}
 ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact', ct_frame_name='contact')
-
 ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
-
 
 
 # Display solution in Gepetto Viewer

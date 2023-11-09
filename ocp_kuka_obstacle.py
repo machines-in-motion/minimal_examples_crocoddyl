@@ -5,9 +5,7 @@ static target reaching task
 
 import crocoddyl
 import numpy as np
-import time
 import pinocchio as pin
-np.set_printoptions(precision=4, linewidth=180)
 import ocp_utils
 try:
     import hppfcl
@@ -18,15 +16,9 @@ except:
 ### LOAD ROBOT MODEL  ###
 # # # # # # # # # # # # #
 
-# # Load robot model directly from URDF & mesh files
-# from pinocchio.robot_wrapper import RobotWrapper
-# urdf_path = '/home/skleff/robot_properties_kuka/urdf/iiwa.urdf'
-# mesh_path = '/home/skleff/robot_properties_kuka'
-# robot = RobotWrapper.BuildFromURDF(urdf_path, mesh_path) 
 
-# Or use robot_properties_kuka 
-from robot_properties_kuka.config import IiwaConfig
-robot = IiwaConfig.buildRobotWrapper()
+from mim_robots.robot_loader import load_pinocchio_wrapper
+robot = load_pinocchio_wrapper("iiwa")
 
 model = robot.model
 nq = model.nq; nv = model.nv; nu = nq; nx = nq+nv
@@ -50,22 +42,21 @@ terminalCostModel = crocoddyl.CostModelSum(state)
 
 
 # Create cost terms 
-  # Control regularization cost
+# Control regularization cost
 uResidual = crocoddyl.ResidualModelControlGrav(state)
 uRegCost = crocoddyl.CostModelResidual(state, uResidual)
-  # State regularization cost
+# State regularization cost
 xResidual = crocoddyl.ResidualModelState(state, x0)
 xRegCost = crocoddyl.CostModelResidual(state, xResidual)
-  # endeff frame translation cost
+# endeff frame translation cost
 endeff_frame_id = model.getFrameId("contact")
-# endeff_translation = robot.data.oMf[endeff_frame_id].translation.copy()
 endeff_translation = np.array([-0.4, 0.3, 0.7]) # move endeff +10 cm along x in WORLD frame
 frameTranslationResidual = crocoddyl.ResidualModelFrameTranslation(state, endeff_frame_id, endeff_translation)
 frameTranslationCost = crocoddyl.CostModelResidual(state, frameTranslationResidual)
   
-  # COLLISION COST 
-  # Create a capsule for the arm
-link_names = ["L1", "L2", "L3", "L4", "L5", "L6", "L7"]
+# COLLISION COST 
+# Create a capsule for the arm
+link_names = ["A1", "A2", "A3", "A4", "A5", "A6", "A7"]
 ig_link_names = []
 for i,ln in enumerate(link_names):
     pin_link_id         = model.getFrameId(ln)
@@ -76,13 +67,14 @@ for i,ln in enumerate(link_names):
                                                       model.frames[model.getFrameId(ln)].parent,
                                                       hppfcl.Capsule(0, 0.5),
                                                       pin.SE3.Identity()))
+
 # Create obstacle in the world
 obsPose = pin.SE3.Identity()
 obsPose.translation = np.array([0., 0., 1.])
 obsObj = pin.GeometryObject("obstacle",
                              model.getFrameId("universe"),
                              model.frames[model.getFrameId("universe")].parent,
-                             hppfcl.Box(0.1),
+                             hppfcl.Box(0.1, 0.1, 0.1),
                              obsPose)
 ig_obs = geomModel.addGeometryObject(obsObj)
 geomModel.addCollisionPair(pin.CollisionPair(ig_link_names,ig_obs))
@@ -93,15 +85,14 @@ residualCollision = crocoddyl.ResidualModelPairCollision(state, nu, geomModel, 0
 costCollision = crocoddyl.CostModelResidual(state, activationCollision, residualCollision)
 
 
-
 # Add costs
 runningCostModel.addCost("stateReg", xRegCost, 1e-1)
 runningCostModel.addCost("ctrlRegGrav", uRegCost, 1e-4)
 runningCostModel.addCost("translation", frameTranslationCost, 10)
-runningCostModel.addCost("collision", costCollision, .1)
+runningCostModel.addCost("collision", costCollision, 100)
 terminalCostModel.addCost("stateReg", xRegCost, 1e-1)
 terminalCostModel.addCost("translation", frameTranslationCost, 10)
-terminalCostModel.addCost("collision", costCollision, .1)
+terminalCostModel.addCost("collision", costCollision, 100)
 
 
 # Create Differential Action Model (DAM), i.e. continuous dynamics and cost functions
@@ -131,17 +122,14 @@ xs_init = [x0 for i in range(T+1)]
 us_init = ddp.problem.quasiStatic(xs_init[:-1])
 
 # Solve
-# ddp.solve(xs_init, us_init, maxiter=100, isFeasible=False)
+ddp.solve(xs_init, us_init, maxiter=100, is_feasible=False)
 
 # # Extract DDP data and plot
-# ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')
-# ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
+ddp_data = ocp_utils.extract_ocp_data(ddp, ee_frame_name='contact')
+ocp_utils.plot_ocp_results(ddp_data, which_plots='all', labels=None, markers=['.'], colors=['b'], sampling_plot=1, SHOW=True)
 
-# #  Display solution in Gepetto Viewer
-# display = crocoddyl.GepettoDisplay(robot)
-# display.displayFromSolver(ddp, factor=1)
-print('o')
-
+# Display in Meshcat
+import time
 from pinocchio.visualize import MeshcatVisualizer
 robot.visual_model.addGeometryObject(obsObj)
 
@@ -149,12 +137,6 @@ viz = MeshcatVisualizer(robot.model, robot.collision_model, robot.visual_model)
 viz.initViewer(open=True)
 viz.loadViewerModel()
 viz.display(q0)
-
-
-import meshcat
-box = meshcat.geometry.Box([0.5, 0.5, 0.5])
-viz.viewer["obstacle"].set_object(box)
-viz.viewer["obstacle"].set_transform(meshcat.transformations.translation_matrix([1,1,1]))
 
 viz.displayCollisions(True)
 viz.displayVisuals(True)
