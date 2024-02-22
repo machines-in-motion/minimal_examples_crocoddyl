@@ -1,5 +1,7 @@
 # minimal_examples_crocoddyl
-Demo scripts to quickly get started with Crocoddyl and MPC
+Demo scripts to quickly get started with Crocoddyl and MPC. 
+
+An easy way to integrate this package is to clone this repository into your project and import ocp_utils and pin_utils for your use. 
 
 
 # Dependencies
