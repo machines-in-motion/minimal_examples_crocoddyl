@@ -4,6 +4,7 @@ static target reaching task
 '''
 
 import crocoddyl
+import mim_solvers
 import numpy as np
 np.set_printoptions(precision=4, linewidth=180)
 
@@ -52,7 +53,12 @@ uResidual = crocoddyl.ResidualModelControlGrav(state)
 uRegCost = crocoddyl.CostModelResidual(state, uResidual)
 # State regularization cost
 xResidual = crocoddyl.ResidualModelState(state, x0)
-xRegCost = crocoddyl.CostModelResidual(state, xResidual)
+xR# endeff frame translation cost
+endeff_frame_id = robot_simulator.pin_robot.model.getFrameId("contact")
+# endeff_translation = robot.data.oMf[endeff_frame_id].translation.copy()
+endeff_translation = np.array([-0.4, 0.3, 0.7]) # move endeff +10 cm along x in WORLD frame
+frameTranslationResidual = crocoddyl.ResidualModelFrameTranslation(state, endeff_frame_id, endeff_translation)
+frameTranslationCost = crocoddyl.CostModelResidual(state, frameTranslationResidual)egCost = crocoddyl.CostModelResidual(state, xResidual)
 # endeff frame translation cost
 endeff_frame_id = robot_simulator.pin_robot.model.getFrameId("contact")
 # endeff_translation = robot.data.oMf[endeff_frame_id].translation.copy()
@@ -76,15 +82,17 @@ terminalModel = crocoddyl.IntegratedActionModelEuler(terminal_DAM, 0.)
 T = 100
 problem = crocoddyl.ShootingProblem(x0, [runningModel] * T, terminalModel)
 # Create solver + callbacks
-ddp = crocoddyl.SolverFDDP(problem)
-# ddp.setCallbacks([crocoddyl.CallbackLogger(),
+solver = mim_solvers.SolverSQP(problem)
+# solver.setCallbacks([crocoddyl.CallbackLogger(),
 #                   crocoddyl.CallbackVerbose()])
 # Warm start : initial state + gravity compensation
 xs_init = [x0 for i in range(T+1)]
-us_init = ddp.problem.quasiStatic(xs_init[:-1])
+us_init = solver.problem.quasiStatic(xs_init[:-1])
 # Solve
-ddp.solve(xs_init, us_init, maxiter=100, is_feasible=False)
-
+solver.termination_tolerance = 1e-4
+solver.with_callbacks = True
+solver.solve(xs_init, us_init, 100)
+solver.with_callbacks = False
 
 
 # # # # # # # # # # # #
@@ -98,7 +106,7 @@ ocp_params['maxiter']      = 10
 ocp_params['pin_model']    = robot_simulator.pin_robot.model
 ocp_params['armature']     = runningModel.differential.armature
 ocp_params['id_endeff']    = endeff_frame_id
-ocp_params['active_costs'] = ddp.problem.runningModels[0].differential.costs.active.tolist()
+ocp_params['active_costs'] = solver.problem.runningModels[0].differential.costs.active.tolist()
 # Simu parameters
 sim_params = {}
 sim_params['sim_freq']  = int(1./env.dt)
@@ -119,25 +127,25 @@ for i in range(sim_data['N_sim']):
     # Solve OCP if we are in a planning cycle (MPC/planning frequency)
     if(i%int(sim_params['sim_freq']/sim_params['mpc_freq']) == 0):
         # Set x0 to measured state 
-        ddp.problem.x0 = sim_data['state_mea_SIM_RATE'][i, :]
+        solver.problem.x0 = sim_data['state_mea_SIM_RATE'][i, :]
         # Warm start using previous solution
-        xs_init = list(ddp.xs[1:]) + [ddp.xs[-1]]
+        xs_init = list(solver.xs[1:]) + [solver.xs[-1]]
         xs_init[0] = sim_data['state_mea_SIM_RATE'][i, :]
-        us_init = list(ddp.us[1:]) + [ddp.us[-1]] 
+        us_init = list(solver.us[1:]) + [solver.us[-1]] 
         
         # Solve OCP & record MPC predictions
-        ddp.solve(xs_init, us_init, maxiter=ocp_params['maxiter'], is_feasible=False)
-        sim_data['state_pred'][mpc_cycle, :, :]  = np.array(ddp.xs)
-        sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(ddp.us)
+        solver.solve(xs_init, us_init, ocp_params['maxiter'])
+        sim_data['state_pred'][mpc_cycle, :, :]  = np.array(solver.xs)
+        sim_data['ctrl_pred'][mpc_cycle, :, :]   = np.array(solver.us)
         # Extract relevant predictions for interpolations
         x_curr = sim_data['state_pred'][mpc_cycle, 0, :]    # x0* = measured state    (q^,  v^ )
         x_pred = sim_data['state_pred'][mpc_cycle, 1, :]    # x1* = predicted state   (q1*, v1*) 
         u_curr = sim_data['ctrl_pred'][mpc_cycle, 0, :]     # u0* = optimal control   (tau0*)
         # Record costs references
         q = sim_data['state_pred'][mpc_cycle, 0, :sim_data['nq']]
-        sim_data['ctrl_ref'][mpc_cycle, :]       = pin_utils.get_u_grav(q, ddp.problem.runningModels[0].differential.pinocchio, ocp_params['armature'])
-        sim_data['state_ref'][mpc_cycle, :]      = ddp.problem.runningModels[0].differential.costs.costs['stateReg'].cost.residual.reference
-        sim_data['lin_pos_ee_ref'][mpc_cycle, :] = ddp.problem.runningModels[0].differential.costs.costs['translation'].cost.residual.reference
+        sim_data['ctrl_ref'][mpc_cycle, :]       = pin_utils.get_u_grav(q, solver.problem.runningModels[0].differential.pinocchio, ocp_params['armature'])
+        sim_data['state_ref'][mpc_cycle, :]      = solver.problem.runningModels[0].differential.costs.costs['stateReg'].cost.residual.reference
+        sim_data['lin_pos_ee_ref'][mpc_cycle, :] = solver.problem.runningModels[0].differential.costs.costs['translation'].cost.residual.reference
 
 
         # Select reference control and state for the current MPC cycle
