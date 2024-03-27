@@ -68,7 +68,7 @@ uRegCost = crocoddyl.CostModelResidual(state, uResidual)
 xResidual = crocoddyl.ResidualModelState(state, x0)
 xRegCost = crocoddyl.CostModelResidual(state, xResidual)
   # End-effector frame force cost
-desired_wrench = np.array([0., 0., 20., 0., 0., 0.])
+desired_wrench = np.array([0., 0., -20., 0., 0., 0.])
 frameForceResidual = crocoddyl.ResidualModelContactForce(state, contact_frame_id, pin.Force(desired_wrench), 6, actuation.nu)
 contactForceCost = crocoddyl.CostModelResidual(state, frameForceResidual)
 # Populate cost models with cost terms
@@ -196,4 +196,4 @@ for i in range(sim_data['N_sim']):
 
 plot_data = mpc_utils.extract_plot_data_from_sim_data(sim_data)
 
-mpc_utils.plot_mpc_results(plot_data, which_plots=['all'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']/10))
+mpc_utils.plot_mpc_results(plot_data, which_plots=['all'], PLOT_PREDICTIONS=True, pred_plot_sampling=int(sim_params['mpc_freq']/100))

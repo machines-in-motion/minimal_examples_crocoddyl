@@ -53,12 +53,7 @@ uResidual = crocoddyl.ResidualModelControlGrav(state)
 uRegCost = crocoddyl.CostModelResidual(state, uResidual)
 # State regularization cost
 xResidual = crocoddyl.ResidualModelState(state, x0)
-xR# endeff frame translation cost
-endeff_frame_id = robot_simulator.pin_robot.model.getFrameId("contact")
-# endeff_translation = robot.data.oMf[endeff_frame_id].translation.copy()
-endeff_translation = np.array([-0.4, 0.3, 0.7]) # move endeff +10 cm along x in WORLD frame
-frameTranslationResidual = crocoddyl.ResidualModelFrameTranslation(state, endeff_frame_id, endeff_translation)
-frameTranslationCost = crocoddyl.CostModelResidual(state, frameTranslationResidual)egCost = crocoddyl.CostModelResidual(state, xResidual)
+xRegCost = crocoddyl.CostModelResidual(state, xResidual)
 # endeff frame translation cost
 endeff_frame_id = robot_simulator.pin_robot.model.getFrameId("contact")
 # endeff_translation = robot.data.oMf[endeff_frame_id].translation.copy()
