@@ -7,6 +7,7 @@ import time
 import matplotlib.pyplot as plt
 import hppfcl
 
+RED = np.array([249, 136, 126, 125]) / 255
 
 # Rotate placement
 def rotate(se3_placement, rpy=[0., 0., 0.]):
@@ -233,6 +234,7 @@ def transform_model_into_capsules(collision_model):
                 hppfcl.Capsule(geometry.radius, geometry.halfLength),
                 placement,
             )
+            geom.meshColor = RED
             collision_model.addGeometryObject(geom)
             collision_model.removeGeometryObject(geom_object.name)
         elif isinstance(geom_object.geometry, hppfcl.Sphere):
